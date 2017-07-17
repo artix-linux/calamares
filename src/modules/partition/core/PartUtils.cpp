@@ -22,7 +22,11 @@
 
 #include "core/DeviceModel.h"
 #include "core/KPMHelpers.h"
+#include "core/PartitionIterator.h"
 
+#include <kpmcore/backend/corebackend.h>
+#include <kpmcore/backend/corebackendmanager.h>
+#include <kpmcore/core/device.h>
 #include <kpmcore/core/partition.h>
 
 #include <utils/Logger.h>
@@ -324,5 +328,4 @@ runOsprober( PartitionCoreModule* core )
     return osproberEntries;
 }
 
-
-}
+}  // nmamespace PartUtils
