@@ -5,6 +5,7 @@
 #
 #   Copyright 2016, Artoo <artoo@manjaro.org>
 #   Copyright 2017, Philip Müller <philm@manjaro.org>
+#   Copyright 2016, Artoo <artoo@cromnix.org>
 #
 #   Calamares is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -260,10 +261,7 @@ class ChrootController:
     def prepare(self):
         cal_umask = os.umask(0)
         self.make_dirs()
-        #path = join(self.root, "run")
-        #os.chmod(path, 0o755)
         os.umask(cal_umask)
-        self.copy_file('etc/pacman-mirrors.conf')
         self.copy_file('etc/resolv.conf')
 
     def run(self):

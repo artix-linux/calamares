@@ -5,6 +5,7 @@
 #
 #   Copyright 2016, Artoo <artoo@manjaro.org>
 #   Copyright 2017, Philip Müller <philm@manjaro.org>
+#   Copyright 2016, Artoo <artoo@cromnix.org>
 #
 #   Calamares is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -57,11 +58,6 @@ class ServicesController:
         for dm in libcalamares.globalstorage.value("displayManagers"):
             exp = 's|^.*DISPLAYMANAGER=.*|DISPLAYMANAGER="' + dm + '"|'
             self.setExpression(exp, "/etc/conf.d/xdm")
-            if dm == "lightdm":
-                self.setExpression(
-                    's|^.*minimum-vt=.*|minimum-vt=7|',
-                    "/etc/lightdm/lightdm.conf"
-                    )
 
     def update(self, action, state):
         for svc in self.services[state]:

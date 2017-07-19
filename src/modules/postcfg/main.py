@@ -5,6 +5,7 @@
 #
 #   Copyright 2014 - 2016, Philip Müller <philm@manjaro.org>
 #   Copyright 2016, Artoo <artoo@manjaro.org>
+#   Copyright 2016, Artoo <artoo@cromnix.org>
 #
 #   Calamares is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -21,8 +22,6 @@
 
 import libcalamares
 
-from shutil import copy2
-from distutils.dir_util import copy_tree
 from os.path import join, exists
 from libcalamares.utils import target_env_call
 
@@ -30,35 +29,15 @@ from libcalamares.utils import target_env_call
 class ConfigController:
     def __init__(self):
         self.__root = libcalamares.globalstorage.value("rootMountPoint")
-        self.__keyrings = libcalamares.job.configuration.get('keyrings', [])
 
     @property
     def root(self):
         return self.__root
 
-    @property
-    def keyrings(self):
-        return self.__keyrings
-
-    def init_keyring(self):
-        target_env_call(["pacman-key", "--init"])
-
-    def populate_keyring(self):
-        target_env_call(["pacman-key", "--populate"] + self.keyrings)
-
     def terminate(self, proc):
         target_env_call(['killall', '-9', proc])
 
-    def copy_file(self, file):
-        if exists("/" + file):
-            copy2("/" + file, join(self.root, file))
-
     def run(self):
-        self.init_keyring()
-        self.populate_keyring()
-
-        self.copy_file('etc/pacman.d/mirrorlist')
-
 
         # Workaround for pacman-key bug
         # FS#45351 https://bugs.archlinux.org/task/45351
