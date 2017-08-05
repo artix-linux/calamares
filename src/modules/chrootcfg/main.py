@@ -274,8 +274,7 @@ class ChrootController:
 
 def run():
     """
-    Create chroot dirs and install pacman,
-    kernel and netinstall selection
+    Download and install package selection
     """
 
     targetRoot = ChrootController()
