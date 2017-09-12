@@ -1,6 +1,7 @@
 /* === This file is part of Calamares - <http://github.com/calamares> ===
  *
  *   Copyright 2014, Teo Mrnjavac <teo@kde.org>
+ *   Copyright 2017, Adriaan de Groot <groot@kde.org>
  *
  *   Originally from Tomahawk,
  *   Copyright 2012, Christian Muehlhaeuser <muesli@tomahawk-player.org>
@@ -52,14 +53,14 @@ ImageRegistry::icon( const QString& image, CalamaresUtils::ImageMode mode )
 
 
 qint64
-ImageRegistry::cacheKey( const QSize& size, float opacity, QColor tint )
+ImageRegistry::cacheKey( const QSize& size, qreal opacity, QColor tint )
 {
-    return size.width() * 100 + size.height() * 10 + ( opacity * 100.0 ) + tint.value();
+    return size.width() * 100 + size.height() * 10 + int( opacity * 100.0 ) + tint.value();
 }
 
 
 QPixmap
-ImageRegistry::pixmap( const QString& image, const QSize& size, CalamaresUtils::ImageMode mode, float opacity, QColor tint )
+ImageRegistry::pixmap( const QString& image, const QSize& size, CalamaresUtils::ImageMode mode, qreal opacity, QColor tint )
 {
     QHash< qint64, QPixmap > subsubcache;
     QHash< int, QHash< qint64, QPixmap > > subcache;
@@ -135,7 +136,7 @@ ImageRegistry::pixmap( const QString& image, const QSize& size, CalamaresUtils::
 
 
 void
-ImageRegistry::putInCache( const QString& image, const QSize& size, CalamaresUtils::ImageMode mode, float opacity, const QPixmap& pixmap, QColor tint )
+ImageRegistry::putInCache( const QString& image, const QSize& size, CalamaresUtils::ImageMode mode, qreal opacity, const QPixmap& pixmap, QColor tint )
 {
 //    cDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Adding to image cache:" << image << size << mode;
 

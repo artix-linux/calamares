@@ -22,8 +22,10 @@
 #include "core/KPMHelpers.h"
 #include "core/PartitionInfo.h"
 #include "core/PartitionCoreModule.h"
+#include "core/PartUtils.h"
 
 #include "utils/CalamaresUtilsSystem.h"
+#include "utils/Units.h"
 #include "JobQueue.h"
 #include "utils/Logger.h"
 #include "GlobalStorage.h"
@@ -35,25 +37,10 @@
 
 namespace PartitionActions
 {
-constexpr qint64 operator ""_MiB( unsigned long long m )
-{
-    return m * static_cast< qint64 >( 1024 ) * 1024;
-}
-
-constexpr qint64 operator ""_GiB( unsigned long long m )
-{
-    return operator ""_MiB(m) * static_cast< qint64 >( 1024 );
-}
-
-constexpr qint64 toMiB( unsigned long long m )
-{
-    return operator ""_MiB( m );
-}
-
-constexpr qint64 toGiB( unsigned long long m )
-{
-    return operator ""_GiB( m );
-}
+using CalamaresUtils::GiBtoBytes;
+using CalamaresUtils::MiBtoBytes;
+using CalamaresUtils::operator""_GiB;
+using CalamaresUtils::operator""_MiB;
 
 qint64
 swapSuggestion( const qint64 availableSpaceB )
@@ -118,9 +105,7 @@ doAutopartition( PartitionCoreModule* core, Device* dev, const QString& luksPass
 {
     Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
 
-    bool isEfi = false;
-    if ( QDir( "/sys/firmware/efi/efivars" ).exists() )
-        isEfi = true;
+    bool isEfi = PartUtils::isEfiSystem();
 
     QString defaultFsType = gs->value( "defaultFileSystemType" ).toString();
     if ( FileSystem::typeForName( defaultFsType ) == FileSystem::Unknown )
@@ -141,11 +126,11 @@ doAutopartition( PartitionCoreModule* core, Device* dev, const QString& luksPass
         empty_space_size = 1;
     }
 
-    qint64 firstFreeSector = toMiB(empty_space_size) / dev->logicalSize() + 1;
+    qint64 firstFreeSector = MiBtoBytes(empty_space_size) / dev->logicalSize() + 1;
 
     if ( isEfi )
     {
-        qint64 lastSector = firstFreeSector + ( toMiB(uefisys_part_size) / dev->logicalSize() );
+        qint64 lastSector = firstFreeSector + ( MiBtoBytes(uefisys_part_size) / dev->logicalSize() );
         core->createPartitionTable( dev, PartitionTable::gpt );
         Partition* efiPartition = KPMHelpers::createNewPartition(
             dev->partitionTable(),
@@ -176,7 +161,7 @@ doAutopartition( PartitionCoreModule* core, Device* dev, const QString& luksPass
         qint64 availableSpaceB = ( dev->totalLogical() - firstFreeSector ) * dev->logicalSize();
         suggestedSwapSizeB = swapSuggestion( availableSpaceB );
         qint64 requiredSpaceB =
-                toGiB( gs->value( "requiredStorageGB" ).toDouble() + 0.1 + 2.0 ) +
+                GiBtoBytes( gs->value( "requiredStorageGB" ).toDouble() + 0.1 + 2.0 ) +
                 suggestedSwapSizeB;
 
         // If there is enough room for ESP + root + swap, create swap, otherwise don't.

@@ -122,6 +122,7 @@ PartitionCoreModule::doInit()
     cDebug() << "node\tcapacity\tname\tprettyName";
     for ( auto device : devices )
     {
+        // Gives ownership of the Device* to the DeviceInfo object
         auto deviceInfo = new DeviceInfo( device );
         m_deviceInfos << deviceInfo;
         cDebug() << device->deviceNode() << device->capacity() << device->name() << device->prettyName();
@@ -167,7 +168,7 @@ PartitionCoreModule::doInit()
 
     //FIXME: this should be removed in favor of
     //       proper KPM support for EFI
-    if ( QDir( "/sys/firmware/efi/efivars" ).exists() )
+    if ( PartUtils::isEfiSystem() )
         scanForEfiSystemPartitions();
 }
 
@@ -461,7 +462,7 @@ PartitionCoreModule::refresh()
 
     //FIXME: this should be removed in favor of
     //       proper KPM support for EFI
-    if ( QDir( "/sys/firmware/efi/efivars" ).exists() )
+    if ( PartUtils::isEfiSystem() )
         scanForEfiSystemPartitions();
 }
 

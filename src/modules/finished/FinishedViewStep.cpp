@@ -23,16 +23,23 @@
 
 #include "utils/Logger.h"
 
+#include <QtDBus/QDBusConnection>
+#include <QtDBus/QDBusInterface>
+#include <QtDBus/QDBusReply>
 #include <QVariantMap>
+
+#include "Branding.h"
 
 FinishedViewStep::FinishedViewStep( QObject* parent )
     : Calamares::ViewStep( parent )
     , m_widget( new FinishedPage() )
+    , installFailed( false )
 {
-    cDebug() << "FinishedViewStep()";
-
-    connect( Calamares::JobQueue::instance(), &Calamares::JobQueue::failed,
-            m_widget, &FinishedPage::onInstallationFailed );
+    auto jq = Calamares::JobQueue::instance();
+    connect( jq, &Calamares::JobQueue::failed,
+             m_widget, &FinishedPage::onInstallationFailed );
+    connect( jq, &Calamares::JobQueue::failed,
+             this, &FinishedViewStep::onInstallationFailed );
 
     emit nextStatusChanged( true );
 }
@@ -55,7 +62,6 @@ FinishedViewStep::prettyName() const
 QWidget*
 FinishedViewStep::widget()
 {
-    cDebug() << "FinishedViewStep::widget()";
     return m_widget;
 }
 
@@ -99,28 +105,63 @@ FinishedViewStep::isAtEnd() const
     return true;
 }
 
+void
+FinishedViewStep::sendNotification()
+{
+    // If the installation failed, don't send notification popup;
+    // there's a (modal) dialog popped up with the failure notice.
+    if (installFailed)
+        return;
+
+    QDBusInterface notify( "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications" );
+    if ( notify.isValid() )
+    {
+        QDBusReply<uint> r = notify.call( "Notify",
+                                          QString( "Calamares" ),
+                                          QVariant( 0U ),
+                                          QString( "calamares" ),
+                                          tr( "Installation Complete" ),
+                                          tr( "The installation of %1 is complete." ).arg( *Calamares::Branding::VersionedName ),
+                                          QStringList(),
+                                          QVariantMap(),
+                                          QVariant( 0 )
+                                        );
+        if ( !r.isValid() )
+            cDebug() << "Could not call notify for end of installation." << r.error();
+    }
+    else
+        cDebug() << "Could not get dbus interface for notifications." << notify.lastError();
+}
+
 
 void
 FinishedViewStep::onActivate()
 {
-    cDebug() << "FinishedViewStep::onActivate()";
     m_widget->setUpRestart();
+
+    sendNotification();
 }
 
 
 QList< Calamares::job_ptr >
 FinishedViewStep::jobs() const
 {
-    cDebug() << "FinishedViewStep::jobs";
     return QList< Calamares::job_ptr >();
 }
 
+void
+FinishedViewStep::onInstallationFailed( const QString& message, const QString& details )
+{
+    Q_UNUSED(message);
+    Q_UNUSED(details);
+    installFailed = true;
+}
 
 void
 FinishedViewStep::setConfigurationMap( const QVariantMap& configurationMap )
 {
     if ( configurationMap.contains( "restartNowEnabled" ) &&
-         configurationMap.value( "restartNowEnabled" ).type() == QVariant::Bool )
+            configurationMap.value( "restartNowEnabled" ).type() == QVariant::Bool )
     {
         bool restartNowEnabled = configurationMap.value( "restartNowEnabled" ).toBool();
 
@@ -128,20 +169,14 @@ FinishedViewStep::setConfigurationMap( const QVariantMap& configurationMap )
         if ( restartNowEnabled )
         {
             if ( configurationMap.contains( "restartNowChecked" ) &&
-                 configurationMap.value( "restartNowChecked" ).type() == QVariant::Bool )
-            {
+                    configurationMap.value( "restartNowChecked" ).type() == QVariant::Bool )
                 m_widget->setRestartNowChecked( configurationMap.value( "restartNowChecked" ).toBool() );
-            }
 
             if ( configurationMap.contains( "restartNowCommand" ) &&
-                 configurationMap.value( "restartNowCommand" ).type() == QVariant::String )
-            {
+                    configurationMap.value( "restartNowCommand" ).type() == QVariant::String )
                 m_widget->setRestartNowCommand( configurationMap.value( "restartNowCommand" ).toString() );
-            }
             else
-            {
-                m_widget->setRestartNowCommand( "systemctl -i reboot");
-            }
+                m_widget->setRestartNowCommand( "systemctl -i reboot" );
         }
     }
 }
