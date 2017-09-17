@@ -52,10 +52,8 @@ class ServicesController:
             's|^.*rc_controller_cgroups=.*|rc_controller_cgroups="YES"|',
             "/etc/rc.conf"
         )
-        exp = (
-            's|^.*keymap=.*|keymap="'
+        exp = 's|^.*keymap=.*|keymap="{}"|'.format(
             libcalamares.globalstorage.value("keyboardLayout")
-            '"|'
         )
 
         self.setExpression(exp, "/etc/conf.d/keymaps")
