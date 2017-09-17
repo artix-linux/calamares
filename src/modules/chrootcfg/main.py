@@ -140,7 +140,8 @@ class PacmanController:
 
         args = 'pacman --noconfirm {} --cachedir {} --root {} --dbpath {} {}'
         cmd = args.format(
-            '-U' if local else '-Sy',  cachedir, self.root, dbdir, pkglist
+            '-U' if local else '-Sy', cachedir, self.root, dbdir,
+            ' '.join(pkglist)
         )
 
         self.parse_output(cmd.split())
@@ -191,7 +192,7 @@ class ChrootController:
         """
 
         for target in self.requirements:
-            dest = join(self.root, target['name'])
+            dest = '{}{}'.format(self.root, target['name'])
             if not os.path.exists(dest):
                 debug("Create: {}".format(dest))
                 mod = int(target["mode"], 8)
