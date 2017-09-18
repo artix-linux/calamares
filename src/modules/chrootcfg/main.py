@@ -21,108 +21,72 @@
 #   along with Calamares. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import shutil
 import subprocess
-import sys
-import re
 import libcalamares
+from os.path import join
 
 from libcalamares.utils import check_target_env_call, target_env_call, debug
-from os.path import join
-from subprocess import call
+
+ON_POSIX = os.name == 'posix'
 
 
 class OperationTracker:
+    """Tracks the overall operation process
+    """
+
     def __init__(self):
-        self._downloaded = 0
-        self._installed = 0
-        self._total = 0
-        self._progress = float(0)
-
-    @property
-    def downloaded(self):
-        return self._downloaded
-
-    @downloaded.setter
-    def downloaded(self, value):
-        self._downloaded = value
-
-    @property
-    def installed(self):
-        return self._installed
-
-    @installed.setter
-    def installed(self, value):
-        self._installed = value
-
-    @property
-    def total(self):
-        return self._total
-
-    @total.setter
-    def total(self, value):
-        self._total = value
-
-    @property
-    def progress(self):
-        return self._progress
-
-    @progress.setter
-    def progress(self, value):
-        self._progress = value
+        self.downloaded = 0
+        self.installed = 0
+        self.total = 0
+        self.progress = 0.00
 
     def send_progress(self, counter, phase):
-        for p in range(phase):
+        """Send progress to calamares
+        """
+
+        for _ in range(phase):
             if self.total == 0:
                 continue
-            step = 0.05
-            step += 0.95 * (counter / float(self.total))
-            self.progress += step / self.total
 
+            self.progress += (
+                0.05 + (0.95 * (counter / self.total))
+            ) / self.total
             debug("Progress: {}".format(self.progress))
 
         libcalamares.job.setprogress(self.progress)
 
 
-ON_POSIX = 'posix' in sys.builtin_module_names
-
-
 class PacmanController:
+    """Wrapper around pacman
+    """
+
     def __init__(self, root):
-        self.__root = root
-        self.__operations = libcalamares.globalstorage.value(
-            "packageOperations"
-            )
-        self.__tracker = OperationTracker()
-        self.__keyrings = libcalamares.job.configuration.get(
-            'keyrings',
-            []
-            )
-
-    @property
-    def tracker(self):
-        return self.__tracker
-
-    @property
-    def root(self):
-        return self.__root
-
-    @property
-    def operations(self):
-        return self.__operations
-
-    @property
-    def keyrings(self):
-        return self.__keyrings
+        self.root = root
+        self.operations = libcalamares.globalstorage.value(
+            'packageOperations'
+        )
+        self.tracker = OperationTracker()
+        self.keyrings = libcalamares.job.configuration.get('keyrings', [])
 
     def init_keyring(self):
+        """Initializes pacman keyring
+        """
+
         target_env_call(["pacman-key", "--init"])
 
     def populate_keyring(self):
+        """Populates pacman keyring
+        """
+
         target_env_call(["pacman-key", "--populate"] + self.keyrings)
 
     def parse_output(self, cmd):
-        cal_env = os.environ
+        """Parses installation output
+        """
+
+        cal_env = os.environ.copy()
         cal_env["LC_ALL"] = "C"
         last = []
         phase = 0
@@ -133,9 +97,9 @@ class PacmanController:
             bufsize=1,
             stdout=subprocess.PIPE,
             close_fds=ON_POSIX
-            )
+        )
 
-        for line in iter(process.stdout.readline, b''):
+        for line in process.stdout.readlines():
             pkgs = re.findall(r'\((\d+)\)', line.decode())
             dl = re.findall(r'downloading\s+(.*).pkg.tar.xz', line.decode())
             inst = re.findall(r'installing(.*)\.\.\.', line.decode())
@@ -151,11 +115,8 @@ class PacmanController:
                     debug("Downloading: {}".format(dl[0]))
                     debug("Downloaded packages: {}".format(
                         self.tracker.downloaded
-                        ))
-                    self.tracker.send_progress(
-                        self.tracker.downloaded,
-                        phase
-                        )
+                    ))
+                    self.tracker.send_progress(self.tracker.downloaded, phase)
 
                 last = dl
             elif inst:
@@ -171,80 +132,67 @@ class PacmanController:
         return None
 
     def install(self, pkglist, local=False):
+        """Install the given packagelist
+        """
+
         cachedir = join(self.root, "var/cache/pacman/pkg")
         dbdir = join(self.root, "var/lib/pacman")
-        args = ["pacman", "--noconfirm"]
-        if local:
-            args.extend(["-U"])
-        else:
-            args.extend(["-Sy"])
 
-        args.extend([
-            "--cachedir",
-            cachedir,
-            "--root",
-            self.root,
-            "--dbpath",
-            dbdir
-            ])
-        cmd = args + pkglist
-        self.parse_output(cmd)
+        args = 'pacman --noconfirm {} --cachedir {} --root {} --dbpath {} {}'
+        cmd = args.format(
+            '-U' if local else '-Sy', cachedir, self.root, dbdir,
+            ' '.join(pkglist)
+        )
+
+        self.parse_output(cmd.split())
 
     def remove(self, pkglist):
-        args = ["chroot", self.root, "pacman", "-Rs", "--noconfirm"]
-        cmd = args + pkglist
-        check_target_env_call(cmd)
+        """Remove the given packagelist
+        """
+
+        check_target_env_call(
+            'chroot {} pacman -Rs --noconfirm {}'.format(self.root, pkglist)
+        )
 
     def run(self):
+        """Run operations
+        """
+
         pkgs = []
         for key in self.operations.keys():
-            if key == "install":
-                for pkg in self.operations[key]:
-                    pkgs.extend([pkg["package"]])
-                self.install(pkgs)
-            elif key == "localInstall":
-                for pkg in self.operations[key]:
-                    pkgs.extend([pkg["package"]])
-                self.install(pkgs, local=True)
+            # append package to pkgs
+            [pkgs.append(p['package']) for p in self.operations[key]]
+
+            if key in ["install", "localinstall"]:
+                self.install(pkgs, local=False if key == 'install' else True)
             elif key == "remove":
-                for pkg in self.operations[key]:
-                    pkgs.extend([pkg["package"]])
                 self.tracker.total(len(pkgs))
                 self.remove(pkgs)
             elif key == "try_install":
-                for pkg in self.operations[key]:
-                    pkgs.extend([pkg["package"]])
                 self.install(pkgs)
             elif key == "try_remove":
-                for pkg in self.operations[key]:
-                    pkgs.extend([pkg["package"]])
                 self.remove(pkgs)
 
         self.init_keyring()
         self.populate_keyring()
 
-        return None
-
 
 class ChrootController:
+    """Chroot controller
+    """
+
     def __init__(self):
-        self.__root = libcalamares.globalstorage.value('rootMountPoint')
-        self.__requirements = libcalamares.job.configuration.get(
-            'requirements',
-            []
-            )
-
-    @property
-    def root(self):
-        return self.__root
-
-    @property
-    def requirements(self):
-        return self.__requirements
+        self.root = libcalamares.globalstorage.value('rootMountPoint')
+        self.requirements = libcalamares.job.configuration.get(
+            'requirements', []
+        )
 
     def make_dirs(self):
+        """Create needed directories
+        """
+
         for target in self.requirements:
-            dest = self.root + target["name"]
+            dest = '{}{}'.format(self.root, target['name'])
             if not os.path.exists(dest):
                 debug("Create: {}".format(dest))
                 mod = int(target["mode"], 8)
@@ -252,31 +200,32 @@ class ChrootController:
                 os.makedirs(dest, mode=mod)
 
     def copy_file(self, file):
-        if os.path.exists(os.path.join("/", file)):
-            shutil.copy2(
-                os.path.join("/", file),
-                os.path.join(self.root, file)
-                )
+        """Copy the given file into root
+        """
+
+        orig = os.path.join("/", file)
+        if os.path.exists(orig):
+            shutil.copy2(orig, os.path.join(self.root, file))
 
     def prepare(self):
+        """Prepare root environment
+        """
+
         cal_umask = os.umask(0)
         self.make_dirs()
         os.umask(cal_umask)
         self.copy_file('etc/resolv.conf')
 
     def run(self):
+        """Execute the controller
+        """
 
         self.prepare()
-        pacman = PacmanController(self.root)
-
-        return pacman.run()
+        return PacmanController(self.root).run()
 
 
 def run():
-    """
-    Download and install package selection
+    """Download and install package selection
     """
 
-    targetRoot = ChrootController()
-
-    return targetRoot.run()
+    return ChrootController().run()
