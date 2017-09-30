@@ -20,38 +20,42 @@
 #   You should have received a copy of the GNU General Public License
 #   along with Calamares. If not, see <http://www.gnu.org/licenses/>.
 
-import libcalamares
 
 from os.path import join, exists
+
+import libcalamares
 from libcalamares.utils import target_env_call
 
 
 class ConfigController:
-    def __init__(self):
-        self.__root = libcalamares.globalstorage.value("rootMountPoint")
+    """Configuration controller
+    """
 
-    @property
-    def root(self):
-        return self.__root
+    def __init__(self):
+        self.root = libcalamares.globalstorage.value("rootMountPoint")
 
     def terminate(self, proc):
+        """Send SIGKILL to the given proccess
+        """
+
         target_env_call(['killall', '-9', proc])
 
     def run(self):
+        """Run the controller
 
-        # Workaround for pacman-key bug
-        # FS#45351 https://bugs.archlinux.org/task/45351
-        # We have to kill gpg-agent because if it stays
-        # around we can't reliably unmount
-        # the target partition.
+        Workaround for pacman-key bug
+        FS#45351 https://bugs.archlinux.org/task/45351
+        We have to kill gpg-agent because if it stays
+        around we can't reliably unmount
+        the target partition.
+        """
+
         self.terminate('gpg-agent')
 
         # Update grub.cfg
-        if exists(join(self.root, "usr/bin/update-grub")) \
-                and libcalamares.globalstorage.value("bootLoader") is not None:
+        if (exists(join(self.root, "usr/bin/update-grub")) and
+                libcalamares.globalstorage.value("bootLoader") is not None):
             target_env_call(["update-grub"])
-
-        return None
 
 
 def run():

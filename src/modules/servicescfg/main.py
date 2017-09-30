@@ -27,49 +27,54 @@ from os.path import exists, join
 
 
 class ServicesController:
+    """This is the service controller
+    """
+
     def __init__(self):
-        self.__root = libcalamares.globalstorage.value('rootMountPoint')
-        self.__services = libcalamares.job.configuration.get('services', [])
-
-    @property
-    def root(self):
-        return self.__root
-
-    @property
-    def services(self):
-        return self.__services
+        self.root = libcalamares.globalstorage.value('rootMountPoint')
+        self.services = libcalamares.job.configuration.get('services', [])
 
     def setExpression(self, pattern, file):
+        """Sed the given file with the given pattern
+        """
+
         target_env_call(["sed", "-e", pattern, "-i", file])
 
     def configure(self):
+        """Configure the services
+        """
+
         self.setExpression(
             's|^.*rc_shell=.*|rc_shell="/usr/bin/sulogin"|',
             "/etc/rc.conf"
-            )
+        )
         self.setExpression(
             's|^.*rc_controller_cgroups=.*|rc_controller_cgroups="YES"|',
             "/etc/rc.conf"
-            )
-        exp = 's|^.*keymap=.*|keymap="' \
-            + libcalamares.globalstorage.value("keyboardLayout") \
-            + '"|'
+        )
+        exp = 's|^.*keymap=.*|keymap="{}"|'.format(
+            libcalamares.globalstorage.value("keyboardLayout")
+        )
+
         self.setExpression(exp, "/etc/conf.d/keymaps")
         for dm in libcalamares.globalstorage.value("displayManagers"):
-            exp = 's|^.*DISPLAYMANAGER=.*|DISPLAYMANAGER="' + dm + '"|'
+            exp = 's|^.*DISPLAYMANAGER=.*|DISPLAYMANAGER="{}"|'.format(dm)
             self.setExpression(exp, "/etc/conf.d/xdm")
 
     def update(self, action, state):
+        """Update init scripts
+        """
+
         for svc in self.services[state]:
             if exists(self.root + "/etc/init.d/" + svc["name"]):
-                target_env_call([
-                    "rc-update",
-                    action,
-                    svc["name"],
-                    svc["runlevel"]
-                    ])
+                target_env_call(
+                    ["rc-update", action, svc["name"], svc["runlevel"]]
+                )
 
     def run(self):
+        """Run the controller
+        """
+
         self.configure()
         for state in self.services.keys():
             if state == "enabled":
@@ -77,10 +82,9 @@ class ServicesController:
             elif state == "disabled":
                 self.update("del", "disabled")
 
-        return None
-
 
 def run():
-    """ Setup openrc services """
-    sc = ServicesController()
-    return sc.run()
+    """Setup openrc services
+    """
+
+    return ServicesController().run()
