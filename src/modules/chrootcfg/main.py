@@ -99,7 +99,8 @@ class PacmanController:
             close_fds=ON_POSIX
         )
 
-        for line in process.stdout.readlines():
+        line = process.stdout.readline()
+        while line:
             pkgs = re.findall(r'\((\d+)\)', line.decode())
             dl = re.findall(r'downloading\s+(.*).pkg.tar.xz', line.decode())
             inst = re.findall(r'installing(.*)\.\.\.', line.decode())
@@ -125,6 +126,8 @@ class PacmanController:
                 debug("Installing: {}".format(inst[0]))
                 debug("Installed packages: {}".format(self.tracker.installed))
                 self.tracker.send_progress(self.tracker.installed, phase)
+
+            line = process.stdout.readline()
 
         if process.returncode != 0:
             return process.kill()
