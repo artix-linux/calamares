@@ -11,7 +11,7 @@ strings:
     bootloaderEntryName: Artix
 
 images:
-    productLogo:         "squid.png"
+    productLogo:         "logo.png"
     productIcon:         "logo.png"
     productWelcome:      "languages.png"
 
