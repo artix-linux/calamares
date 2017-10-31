@@ -161,11 +161,10 @@ class PacmanController:
         """Run operations
         """
 
-        pkgs = []
-        for key in self.operations.keys():
-            # append package to pkgs
-            [pkgs.append(p['package']) for p in self.operations[key]]
-
+        ops = self.operations[0]
+        for key in ops.keys():
+            debug("key: {}".format(key))
+            pkgs = ops[key]
             if key in ["install", "localinstall"]:
                 self.install(pkgs, local=False if key == 'install' else True)
             elif key == "remove":
