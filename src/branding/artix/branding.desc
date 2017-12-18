@@ -1,0 +1,24 @@
+---
+componentName:  artix
+
+strings:
+    productName:         Artix Linux
+    shortProductName:    Artix
+    version:             rolling
+    shortVersion:        rolling
+    versionedName:       Artix Linux "rolling"
+    shortVersionedName:  Artix rolling
+    bootloaderEntryName: Artix
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "languages.png"
+
+slideshow:               "show.qml"
+
+style:
+   sidebarBackground:    "#292F34"
+   sidebarText:          "#FFFFFF"
+   sidebarTextSelect:    "#292F34"
+   sidebarTextHighlight: "#598cb8"
