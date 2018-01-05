@@ -1,4 +1,4 @@
-/* === This file is part of Calamares - <http://github.com/calamares> ===
+/* === This file is part of Calamares - <https://github.com/calamares> ===
  *
  *   Copyright 2016, Teo Mrnjavac <teo@kde.org>
  *
@@ -135,7 +135,7 @@ SetPartFlagsJob::exec()
     Report report ( nullptr );
     SetPartFlagsOperation op( *m_device, *partition(), m_flags );
     op.setStatus( Operation::StatusRunning );
-    connect( &op, &Operation::progress, this, &SetPartFlagsJob::progress );
+    connect( &op, &Operation::progress, this, &SetPartFlagsJob::iprogress );
 
     QString errorMessage = tr( "The installer failed to set flags on partition %1." )
                            .arg( m_partition->partitionPath() );

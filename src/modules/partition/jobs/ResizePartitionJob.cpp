@@ -1,4 +1,4 @@
-/* === This file is part of Calamares - <http://github.com/calamares> ===
+/* === This file is part of Calamares - <https://github.com/calamares> ===
  *
  *   Copyright 2014, Aurélien Gâteau <agateau@kde.org>
  *   Copyright 2015, Teo Mrnjavac <teo@kde.org>
@@ -80,7 +80,7 @@ ResizePartitionJob::exec()
     m_partition->setLastSector( m_oldLastSector );
     ResizeOperation op(*m_device, *m_partition, m_newFirstSector, m_newLastSector);
     op.setStatus(Operation::StatusRunning);
-    connect(&op, &Operation::progress, this, &ResizePartitionJob::progress );
+    connect(&op, &Operation::progress, this, &ResizePartitionJob::iprogress );
 
     QString errorMessage = tr( "The installer failed to resize partition %1 on disk '%2'." )
                        .arg( m_partition->partitionPath() )
