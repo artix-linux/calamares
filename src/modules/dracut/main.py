@@ -42,8 +42,18 @@ def run_dracut():
 
     :return:
     """
-    return target_env_call(['dracut', '-f'])
 
+    initrd = libcalamares.job.configuration['initrd']
+
+    kver = libcalamares.job.configuration['kver']
+
+    if (("initrd" in libcalamares.job.configuration) and
+               (libcalamares.job.configuration["initrd"] is not None)):
+        if (("kver" in libcalamares.job.configuration) and
+               (libcalamares.job.configuration["kver"] is not None)):
+            return target_env_call(['dracut', '-f', initrd, kver])
+    else
+        return target_env_call(['dracut', '-f'])
 
 def run():
     """
